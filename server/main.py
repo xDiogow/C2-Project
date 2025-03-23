@@ -3,8 +3,6 @@ import os
 import socket
 import threading
 
-from wheel.macosx_libfile import version_min_command_fields
-
 client_connections = {}
 client_connections_lock = threading.Lock()
 is_connected = False
