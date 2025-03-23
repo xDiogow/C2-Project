@@ -7,6 +7,8 @@ from client.commands.cd import change_directory
 from client.commands.ls import list_directory
 from client.commands.pwd import print_working_directory
 from client.commands.rm import remove
+from client.commands.rmdir import remove_directory
+from client.commands.mkdir import make_directory
 
 # Command registry
 COMMANDS = {
@@ -15,6 +17,8 @@ COMMANDS = {
     "pwd": print_working_directory,
     "cat": concatenate_files,
     "rm": remove,
+    "rmdir": remove_directory,
+    "mkdir": make_directory,
 }
 
 
