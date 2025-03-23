@@ -110,7 +110,7 @@ def command_loop():
         while True:
             command = input(f"{target_ip}:{current_directory}> ").strip()
 
-            if command.lower() == "exit":
+            if command.lower() == "exit" or command.lower() == "quit" or command.lower() == "disconnect":
                 break
             elif command.lower() == "clear":
                 os.system("clear")

@@ -5,6 +5,7 @@ import client.client_data as client_data
 from client.commands.cat import concatenate_files
 from client.commands.cd import change_directory
 from client.commands.echo import echo
+from client.commands.help import get_help
 from client.commands.ls import list_directory
 from client.commands.mkdir import make_directory
 from client.commands.pwd import print_working_directory
@@ -23,6 +24,7 @@ COMMANDS = {
     "mkdir": make_directory,
     "touch": touch,
     "echo": echo,
+    "help": get_help,
 }
 
 def execute_command(command_line):
