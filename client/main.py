@@ -6,10 +6,10 @@ from client.commands.cat import concatenate_files
 from client.commands.cd import change_directory
 from client.commands.echo import echo
 from client.commands.ls import list_directory
+from client.commands.mkdir import make_directory
 from client.commands.pwd import print_working_directory
 from client.commands.rm import remove
 from client.commands.rmdir import remove_directory
-from client.commands.mkdir import make_directory
 from client.commands.touch import touch
 
 # Command registry
@@ -65,7 +65,7 @@ def keep_alive_client(host='127.0.0.1', port=9999):
             print(f"[*] Received: {response.decode('utf-8')}")
     finally:
         client_socket.close()
-        print("[*] Connection closed.")
+        print("[*] Server closed.")
 
 
 if __name__ == "__main__":
