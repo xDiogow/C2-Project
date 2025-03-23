@@ -4,11 +4,13 @@ import socket
 import client.client_data as client_data
 from client.commands.cat import concatenate_files
 from client.commands.cd import change_directory
+from client.commands.echo import echo
 from client.commands.ls import list_directory
 from client.commands.pwd import print_working_directory
 from client.commands.rm import remove
 from client.commands.rmdir import remove_directory
 from client.commands.mkdir import make_directory
+from client.commands.touch import touch
 
 # Command registry
 COMMANDS = {
@@ -19,6 +21,8 @@ COMMANDS = {
     "rm": remove,
     "rmdir": remove_directory,
     "mkdir": make_directory,
+    "touch": touch,
+    "echo": echo,
 }
 
 
