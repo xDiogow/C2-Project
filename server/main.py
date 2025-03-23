@@ -141,8 +141,12 @@ def command_loop():
                     successful = send_to_client(client_addr, message)
                     if successful:
                         response_event.wait()
-        except:
+        except ValueError:
+            print('[*] Invalid port number.')
+        except KeyError:
             print(f'[*] {client_ip}:{client_port} is not connected.')
+        except Exception as e:
+            print(f'[*] Unexpected error: {e}')
 
 
 
