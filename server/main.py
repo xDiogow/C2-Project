@@ -29,7 +29,6 @@ def start_server(host='0.0.0.0', port=9999):
 
         threading.Thread(target=handle_client, args=(client_socket, addr), daemon=True).start()
 
-
 def handle_client(client_socket, addr):
     buffer = ""
     try:
@@ -50,6 +49,8 @@ def handle_client(client_socket, addr):
                             output = payload.get("output", "")
                             current_directory = payload.get("current_directory", "~")
 
+                            print(f"{output}")
+
                             with client_connections_lock:
                                 client_connections[addr]['current_directory'] = current_directory
                                 client_connections[addr]['last_response'] = output
@@ -63,7 +64,6 @@ def handle_client(client_socket, addr):
                 if not client_connections:
                     client_connected_event.clear()  # Clear event if no clients connected
         print(f"[-] Connection from {addr[0]}:{addr[1]} closed.")
-
 
 def send_to_client(addr, command):
     message = json.dumps({
