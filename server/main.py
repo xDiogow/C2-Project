@@ -49,7 +49,7 @@ def handle_client(client_socket, addr):
                             output = payload.get("output", "")
                             current_directory = payload.get("current_directory", "~")
 
-                            print(f"{output}")
+                            print(output)
 
                             with client_connections_lock:
                                 client_connections[addr]['current_directory'] = current_directory
