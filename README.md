@@ -15,6 +15,7 @@ A Python-based remote shell implementation with a client-server architecture.
     - `mkdir` - Create directories
     - `touch` - Create empty files
     - `echo` - Display text
+  - `shell` - Execute a shell command
 
 # Disclaimer
 
@@ -42,3 +43,4 @@ This project is open source and provided under MIT license.
 ```python
 python -m venv .venv
 source .venv/bin/activate  # Linux/macOS
+```
