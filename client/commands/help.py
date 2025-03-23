@@ -15,6 +15,6 @@ def get_help(args):
         "mkdir - Create directories",
         "touch - Create empty files",
         "echo - Display a line of text",
-        "help - Display this help message"
+        "help - Display this help message",
         "exit/disconnect/quit - Disconnect from the client"
     ])
