@@ -6,6 +6,7 @@ from client.commands.cat import concatenate_files
 from client.commands.cd import change_directory
 from client.commands.ls import list_directory
 from client.commands.pwd import print_working_directory
+from client.commands.rm import remove
 
 # Command registry
 COMMANDS = {
@@ -13,6 +14,7 @@ COMMANDS = {
     "cd": change_directory,
     "pwd": print_working_directory,
     "cat": concatenate_files,
+    "rm": remove,
 }
 
 
