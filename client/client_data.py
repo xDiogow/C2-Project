@@ -1,1 +1,1 @@
-current_directory = "~"
+current_directory = "/home/"

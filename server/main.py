@@ -103,7 +103,15 @@ def command_loop():
                 print(f"  - {addr[0]}:{addr[1]}")
 
         target_ip = input("Enter client IP: ").strip()
-        target_port = int(input("Enter client port: ").strip())
+
+
+        target_port = input("Enter client port: ").strip()
+        try:
+            target_port = int(target_port)
+        except ValueError:
+            print(f"[!] Invalid port {target_port}.")
+            continue
+
         addr = (target_ip, target_port)
 
         print(f"[+] Connected to {target_ip}:{target_port}. Type 'exit' to disconnect.")
