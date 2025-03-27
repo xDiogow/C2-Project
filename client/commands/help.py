@@ -1,4 +1,3 @@
-# Add this function to client/commands/help.py
 def get_help(args):
     """
     Display available commands and their descriptions.
